@@ -1,4 +1,4 @@
-name: Train ML Model (Notebook)
+name: CI-CD ML Deployment (Notebook Based)
 
 on:
   push:
@@ -19,12 +19,14 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Install dependencies and register kernel
+    - name: Install dependencies
       run: |
         pip install -r requirements.txt
-        pip install notebook nbconvert ipykernel
-        python -m ipykernel install --user --name python3
+        pip install notebook nbconvert ipykernel jq bc
 
+    - name: Register kernel
+      run: |
+        python -m ipykernel install --user --name python3
 
     - name: Run training notebook
       run: |
@@ -42,10 +44,65 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: trained-model
-        path: outputs/model/
+        path: outputs/model/model.joblib
 
     - name: Upload metrics
       uses: actions/upload-artifact@v4
       with:
         name: evaluation-results
-        path: outputs/results/
+        path: outputs/results/metrics.json
+
+  deploy:
+    needs: train
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Download model artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: trained-model
+
+    - name: Download metrics artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: evaluation-results
+
+    - name: Read metrics
+      run: |
+        echo "R2=$(jq .r2 metrics.json)" >> $GITHUB_ENV
+        echo "MSE=$(jq .mse metrics.json)" >> $GITHUB_ENV
+
+    - name: Compare metrics
+      run: |
+        if (( $(echo "$R2 <= ${{ vars.BEST_R2 }}" | bc -l) )); then
+          echo "2022BCS0172 ---- Metric did not improve"
+          exit 0
+        fi
+
+    - name: Login to Docker Hub
+      run: |
+        echo "${{ secrets.DOCKER_TOKEN }}" | docker login \
+          -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+    - name: Build Docker image
+      run: |
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/wine_predict_2022bcs0172:latest .
+
+    - name: Push Docker image
+      run: |
+        docker push ${{ secrets.DOCKER_USERNAME }}/wine_predict_2022bcs0172:latest
+
+    - name: Update BEST_R2 variable
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GH_PAT }}
+        script: |
+          await github.actions.updateRepoVariable({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            name: "BEST_R2",
+            value: process.env.R2
+          })
