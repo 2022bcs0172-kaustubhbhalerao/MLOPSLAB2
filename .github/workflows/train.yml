@@ -85,7 +85,7 @@ jobs:
     - name: Login to Docker Hub
       run: |
         echo "${{ secrets.DOCKER_TOKEN }}" | docker login \
-          -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          -u kaustubh2022bcs0172docker --password-stdin
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -95,10 +95,10 @@ jobs:
         mv model.joblib ./model.joblib || true
 
     - name: Build Docker image
-      run: docker build -t 2022bcs0172_kaustubhbhalerao/wine_predict_2022bcs0172:v1 .
+      run: docker build -t kaustubh2022bcs0172docker/wine_predict_2022bcs0172:v1 .
 
     - name: Push Docker image
-      run: docker push 2022bcs0172_kaustubhbhalerao/wine_predict_2022bcs0172:v1
+      run: docker push kaustubh2022bcs0172docker/wine_predict_2022bcs0172:v1
 
     - name: Update BEST_R2 variable
       uses: actions/github-script@v7
