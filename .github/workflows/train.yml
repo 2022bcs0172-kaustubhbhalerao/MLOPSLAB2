@@ -99,15 +99,3 @@ jobs:
 
     - name: Push Docker image
       run: docker push kaustubh2022bcs0172docker/wine_predict_2022bcs0172:v1
-
-    - name: Update BEST_R2 variable
-      uses: actions/github-script@v7
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          await github.actions.updateRepoVariable({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            name: "BEST_R2",
-            value: process.env.R2
-          })
