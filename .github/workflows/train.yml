@@ -103,7 +103,7 @@ jobs:
     - name: Update BEST_R2 variable
       uses: actions/github-script@v7
       with:
-        github-token: ${{ secrets.GH_PAT }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           await github.actions.updateRepoVariable({
             owner: context.repo.owner,
